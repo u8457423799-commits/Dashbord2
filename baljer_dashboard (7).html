@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — BI-Tranby</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0d0f14;color:#e8e6e0;min-height:100vh;}
+.dash{display:grid;grid-template-rows:52px auto auto auto;gap:8px;padding:8px;min-height:100vh;}
+.topbar{display:flex;align-items:center;justify-content:space-between;background:#161920;border:0.5px solid #252830;border-radius:10px;padding:0 16px;}
+.top-left{display:flex;align-items:center;gap:12px;}
+.top-title{font-size:15px;font-weight:500;}
+.site-badge{font-size:11px;background:#1e2130;color:#6a8fd8;padding:3px 10px;border-radius:20px;border:0.5px solid #2e3650;}
+.top-right{display:flex;align-items:center;gap:14px;font-size:12px;color:#898781;}
+.live{display:flex;align-items:center;gap:5px;}
+.dot{width:7px;height:7px;border-radius:50%;background:#0ca30c;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+#clk{font-family:monospace;font-size:14px;color:#c3c2b7;font-weight:500;}
+.refresh-info{font-size:11px;color:#555;}
+#spUrl{font-size:11px;color:#555;padding:4px 8px;background:#111318;border-radius:6px;border:0.5px solid #1e2130;font-family:monospace;width:340px;outline:none;}
+#spUrl:focus{border-color:#2e3650;color:#6a8fd8;}
+
+.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.scard{background:#161920;border:0.5px solid #252830;border-radius:10px;padding:12px 14px;}
+.scard-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+.scard-val{font-size:24px;font-weight:500;line-height:1;}
+.scard-sub{font-size:11px;color:#898781;margin-top:3px;}
+.scard-bar{height:5px;background:#1e2130;border-radius:3px;margin-top:8px;}
+.scard-bar-fill{height:5px;border-radius:3px;}
+
+.midrow{display:grid;gap:8px;}
+.card{background:#161920;border:0.5px solid #252830;border-radius:10px;padding:12px 14px;}
+.card-title{font-size:10px;font-weight:500;color:#898781;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+
+.meter-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.meter-pct{font-size:22px;font-weight:500;text-align:center;margin-top:-4px;}
+.meter-sub{font-size:10px;color:#555;text-align:center;}
+.meter-nums{display:flex;justify-content:space-around;width:100%;margin-top:6px;}
+.mn-item{text-align:center;}
+.mn-val{font-size:13px;font-weight:500;}
+.mn-lbl{font-size:9px;color:#555;}
+
+.tbl-wrap{overflow:auto;max-height:calc(100vh - 400px);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{position:sticky;top:0;background:#111318;padding:7px 8px;text-align:right;font-size:10px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;border-bottom:0.5px solid #252830;}
+thead th:first-child,thead th:nth-child(2){text-align:left;}
+tbody tr{border-bottom:0.5px solid #1a1c24;}
+tbody tr:hover{background:#1a1c24;}
+tbody td{padding:5px 8px;text-align:right;color:#c3c2b7;}
+tbody td:first-child{text-align:left;color:#e8e6e0;}
+tbody td:nth-child(2){text-align:left;color:#898781;font-family:monospace;font-size:11px;}
+.tag{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:500;display:inline-block;white-space:nowrap;}
+.done-row td{opacity:.65;}
+.done-row td:first-child{opacity:1;}
+.qty-done{color:#4dd44d;font-weight:500;}
+.qty-zero{color:#555;}
+.status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;}
+
+.filter-bar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center;}
+.fbtn{padding:4px 11px;border-radius:20px;border:0.5px solid #2e3040;background:#161920;color:#898781;font-size:11px;cursor:pointer;transition:all .15s;}
+.fbtn:hover{border-color:#6a8fd8;color:#c3c2b7;}
+.fbtn.active{background:#1e2a4a;border-color:#3d5fa0;color:#6aabf7;}
+.search-wrap{margin-left:auto;}
+#search{background:#1a1c24;border:0.5px solid #2e3040;border-radius:6px;padding:4px 10px;color:#c3c2b7;font-size:11px;width:180px;outline:none;}
+#search::placeholder{color:#555;}
+.last-updated{font-size:10px;color:#555;text-align:right;padding:4px 0;}
+.err-banner{background:#1e0a0a;border:0.5px solid #4d1c1c;border-radius:8px;padding:6px 12px;font-size:12px;color:#e89090;margin-bottom:8px;display:none;}
+</style>
+</head>
+<body>
+<div class="dash">
+  <div class="topbar">
+    <div class="top-left">
+      <div class="top-title">Dashboard Posepakking</div>
+      <div class="site-badge">BI-Tranby</div>
+    </div>
+    <div class="top-right">
+      <div class="live"><div class="dot"></div>Live</div>
+      <div id="clk">--:--:--</div>
+      <div class="refresh-info">↻ hvert 5. min</div>
+      <input id="spUrl" value="https://bama.sharepoint.com/sites/ramanan_Prosjekt/Shared Documents/Apps/produksjon.json" title="SharePoint URL til CSV eller JSON-fil">
+    </div>
+  </div>
+
+  <div class="summary" id="summaryRow"></div>
+  <div class="midrow" id="midRow"></div>
+
+  <div class="card">
+    <div class="err-banner" id="errBanner"></div>
+    <div class="filter-bar" id="filterBar">
+      <button class="fbtn active" data-f="ALL">Alle</button>
+      <button class="fbtn" data-f="DONE">Ferdig ✓</button>
+      <button class="fbtn" data-f="ACTIVE">Pågår</button>
+      <button class="fbtn" data-f="SCHEDULED">Planlagt</button>
+      <div class="search-wrap">
+        <input id="search" type="text" placeholder="Søk produkt / varenr...">
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left;min-width:200px;">Produktnavn</th>
+            <th style="text-align:left;">Varenr</th>
+            <th>Gruppe</th>
+            <th>Status</th>
+            <th>Planlagt</th>
+            <th>Ferdigmeldt</th>
+            <th>Gjenstår</th>
+            <th>%</th>
+            <th>Levering</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="last-updated" id="lastUpdated"></div>
+  </div>
+</div>
+
+<script>
+// ── CSV PARSER ──
+function parseCSV(text){
+  const lines=text.trim().split('\n');
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line=>{
+    const vals=[];
+    let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){inQ=!inQ;}
+      else if(c===','&&!inQ){vals.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    vals.push(cur.trim());
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=(vals[i]||'').replace(/^"|"$/g,''));
+    return obj;
+  });
+}
+
+// ── HELPERS ──
+function n(v){const x=parseFloat(v);return isNaN(x)?0:x;}
+function pct(done,plan){return plan>0?Math.min(100,Math.round(done/plan*100)):0;}
+function fmt(v){return Math.round(v).toLocaleString('nb-NO');}
+function fmtDate(iso){
+  if(!iso||iso.startsWith('1900'))return '—';
+  try{const d=new Date(iso);return d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'});}catch{return iso.slice(0,10);}
+}
+
+// Prod_group → kort label + farge
+const GROUP_META={
+  'FV-SF-DV':{label:'Dagligvare',color:'#4dd44d',bg:'#0b2d0b'},
+  'FV-SF-SK':{label:'Storkjøkken',color:'#6aabf7',bg:'#0b1e38'},
+  'FV-SF-Vaku':{label:'Vakuum',color:'#c084fc',bg:'#1e0b38'},
+  'FV-SF-Ind':{label:'Industri',color:'#fab219',bg:'#2d1800'},
+  'FV-SF-Be':{label:'Beger',color:'#f472b6',bg:'#2d0b1e'},
+  'HF':{label:'HF',color:'#38bdf8',bg:'#0b1e2d'},
+};
+function groupMeta(g){
+  for(const key of Object.keys(GROUP_META)){
+    if(g&&g.startsWith(key))return{...GROUP_META[key],key};
+  }
+  return{label:g||'—',color:'#898781',bg:'#1a1c24',key:g};
+}
+
+// Status → norsk
+function statusLabel(s){
+  const m={Completed:'Ferdig',ReportedFinished:'Ferdigmeldt',StartedUp:'Pågår',Scheduled:'Planlagt',CostEstimated:'Kostn.est.'};
+  return m[s]||s;
+}
+function statusColor(s){
+  if(s==='Completed'||s==='ReportedFinished')return '#4dd44d';
+  if(s==='StartedUp')return '#6aabf7';
+  if(s==='Scheduled')return '#fab219';
+  return '#555';
+}
+
+// ── PROCESS DATA ──
+function process(raw){
+  return raw
+    .filter(r=>r.Site==='BI-Tranby')
+    .map(r=>{
+      const plan=n(r.QTY_scheduled);
+      const remaining=n(r.QTY_remaining_reportedAF);
+      const done=Math.max(0,plan-remaining);
+      const p=pct(done,plan);
+      const isDone=r.Status==='Completed'||r.Status==='ReportedFinished';
+      const isActive=r.Status==='StartedUp'&&done>0;
+      const isScheduled=r.Status==='Scheduled'||r.Status==='CostEstimated';
+      return{...r,plan,remaining,done,pct:p,isDone,isActive,isScheduled};
+    });
+}
+
+// ── SUMMARY ──
+function calcSummary(data){
+  const totPlan=data.reduce((s,r)=>s+r.plan,0);
+  const totDone=data.reduce((s,r)=>s+r.done,0);
+  const totRemain=data.reduce((s,r)=>s+r.remaining,0);
+  const doneOrders=data.filter(r=>r.isDone).length;
+  const activeOrders=data.filter(r=>r.Status==='StartedUp').length;
+  const totalOrders=data.length;
+  // Per prod_group
+  const groups={};
+  data.forEach(r=>{
+    const key=Object.keys(GROUP_META).find(k=>r.Prod_group&&r.Prod_group.startsWith(k))||r.Prod_group||'Annet';
+    if(!groups[key])groups[key]={plan:0,done:0,remaining:0};
+    groups[key].plan+=r.plan;
+    groups[key].done+=r.done;
+    groups[key].remaining+=r.remaining;
+  });
+  return{totPlan,totDone,totRemain,doneOrders,activeOrders,totalOrders,groups,totalPct:pct(totDone,totPlan)};
+}
+
+// ── RENDER SUMMARY ──
+function renderSummary(s){
+  const col=s.totalPct<30?'#e34948':s.totalPct<70?'#fab219':'#4dd44d';
+  document.getElementById('summaryRow').innerHTML=`
+    <div class="scard">
+      <div class="scard-label">Plan totalt</div>
+      <div class="scard-val">${fmt(s.totPlan)}</div>
+      <div class="scard-sub">stk — BI-Tranby</div>
+    </div>
+    <div class="scard">
+      <div class="scard-label">Ferdigmeldt</div>
+      <div class="scard-val" style="color:#4dd44d;">${fmt(s.totDone)}</div>
+      <div class="scard-sub">${s.totalPct}% av plan</div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${s.totalPct}%;background:#4dd44d;"></div></div>
+    </div>
+    <div class="scard">
+      <div class="scard-label">Gjenstår</div>
+      <div class="scard-val" style="color:#e34948;">${fmt(s.totRemain)}</div>
+      <div class="scard-sub">stk</div>
+    </div>
+    <div class="scard">
+      <div class="scard-label">Ordre status</div>
+      <div class="scard-val">${s.doneOrders}<span style="font-size:13px;color:#555;"> / ${s.totalOrders}</span></div>
+      <div class="scard-sub">${s.activeOrders} pågår · ${s.doneOrders} ferdig</div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${Math.round(s.doneOrders/s.totalOrders*100)}%;background:#6aabf7;"></div></div>
+    </div>
+    <div class="scard">
+      <div class="scard-label">Seedometer total</div>
+      <div class="scard-val" style="color:${col};">${s.totalPct}%</div>
+      <div class="scard-sub">Posepakking totalt</div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${s.totalPct}%;background:${col};"></div></div>
+    </div>`;
+}
+
+// ── SVG METER ──
+function makeSVGMeter(pctVal,color){
+  const r=48,cx=62,cy=60;
+  const startA=-Math.PI,endA=0;
+  const fillEnd=startA+(endA-startA)*(Math.min(100,pctVal)/100);
+  const x1=cx+r*Math.cos(startA),y1=cy+r*Math.sin(startA);
+  const x2=cx+r*Math.cos(fillEnd),y2=cy+r*Math.sin(fillEnd);
+  const lg=(fillEnd-startA)>Math.PI?1:0;
+  return `<svg viewBox="0 0 124 72" width="124" height="72">
+    <path d="M${cx-r} ${cy} A${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="#1e2130" stroke-width="10" stroke-linecap="round"/>
+    ${pctVal>0?`<path d="M${x1} ${y1} A${r} ${r} 0 ${lg} 1 ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"/>`:''}
+    <line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(fillEnd)}" y2="${cy+r*Math.sin(fillEnd)}" stroke="#e8e6e0" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="4" fill="#e8e6e0"/>
+  </svg>`;
+}
+
+// ── RENDER MID (gruppe-seedometre) ──
+function renderMid(s){
+  const mainGroups=Object.keys(GROUP_META);
+  const cols=mainGroups.length+1;
+  document.getElementById('midRow').style.gridTemplateColumns=`repeat(${cols},1fr)`;
+
+  let html='';
+  mainGroups.forEach(key=>{
+    const g=s.groups[key]||{plan:0,done:0,remaining:0};
+    const m=GROUP_META[key];
+    const p=pct(g.done,g.plan);
+    html+=`<div class="card" style="align-items:center;">
+      <div class="card-title" style="color:${m.color};text-align:center;">${m.label}</div>
+      <div class="meter-wrap">
+        ${makeSVGMeter(p,m.color)}
+        <div class="meter-pct" style="color:${m.color};">${p}%</div>
+        <div class="meter-sub">${fmt(g.done)} / ${fmt(g.plan)}</div>
+        <div class="meter-nums">
+          <div class="mn-item"><div class="mn-val" style="color:#4dd44d;">${fmt(g.done)}</div><div class="mn-lbl">Ferdig</div></div>
+          <div class="mn-item"><div class="mn-val" style="color:#e34948;">${fmt(g.remaining)}</div><div class="mn-lbl">Gjenstår</div></div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  // Siste oppdaterte ordre
+  html+=`<div class="card">
+    <div class="card-title">Siste ferdigmeldt</div>
+    <div id="sisteKlCard" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </div>`;
+  document.getElementById('midRow').innerHTML=html;
+}
+
+function renderSiste(data){
+  const el=document.getElementById('sisteKlCard');
+  if(!el)return;
+  const recent=data
+    .filter(r=>r.isDone&&r.Date_reportedAF&&!r.Date_reportedAF.startsWith('1900'))
+    .sort((a,b)=>new Date(b.Date_reportedAF)-new Date(a.Date_reportedAF))
+    .slice(0,6);
+  el.innerHTML=recent.map(r=>{
+    const m=groupMeta(r.Prod_group);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;">
+      <div style="color:#c3c2b7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${r.Order_name}</div>
+      <div style="color:${m.color};margin-left:8px;white-space:nowrap;">${fmtDate(r.Date_reportedAF)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── RENDER TABLE ──
+let currentFilter='ALL',currentSearch='',allData=[];
+const GROUP_FILTERS=Object.keys(GROUP_META);
+
+function renderTable(){
+  const q=currentSearch.toLowerCase();
+  const rows=allData.filter(r=>{
+    if(currentFilter==='DONE') return r.isDone;
+    if(currentFilter==='ACTIVE') return r.Status==='StartedUp';
+    if(currentFilter==='SCHEDULED') return r.isScheduled;
+    if(currentFilter==='ALL') return true;
+    // Gruppe-filter
+    return r.Prod_group&&r.Prod_group.startsWith(currentFilter);
+  }).filter(r=>!q||
+    r.Order_name.toLowerCase().includes(q)||
+    (r.Item_nr||'').toLowerCase().includes(q)||
+    (r.Order_nr||'').includes(q)
+  );
+
+  document.getElementById('tbody').innerHTML=rows.map(r=>{
+    const m=groupMeta(r.Prod_group);
+    const sc=statusColor(r.Status);
+    const sl=statusLabel(r.Status);
+    const pc=r.pct>=100?'#4dd44d':r.pct>0?'#6aabf7':'#555';
+    return `<tr class="${r.isDone?'done-row':''}">
+      <td>${r.Order_name}</td>
+      <td>${r.Item_nr||'—'}</td>
+      <td><span class="tag" style="background:${m.bg};color:${m.color};">${m.label}</span></td>
+      <td><span class="status-dot" style="background:${sc};"></span><span style="font-size:11px;color:#898781;">${sl}</span></td>
+      <td>${fmt(r.plan)}</td>
+      <td class="${r.done>0?'qty-done':'qty-zero'}">${r.done>0?fmt(r.done):'—'}</td>
+      <td class="${r.remaining>0?'':'qty-zero'}">${r.remaining>0?fmt(r.remaining):'—'}</td>
+      <td style="color:${pc};font-weight:500;">${r.pct>0?r.pct+'%':'—'}</td>
+      <td style="font-family:monospace;color:#898781;font-size:11px;">${fmtDate(r.Date_delivery)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── FILTER BUTTONS ──
+function buildFilterButtons(data){
+  const bar=document.getElementById('filterBar');
+  // Fjern gamle gruppe-knapper
+  bar.querySelectorAll('.grp-btn').forEach(b=>b.remove());
+  const search=bar.querySelector('.search-wrap');
+
+  // Legg til gruppe-knapper basert på data
+  const foundGroups=new Set();
+  data.forEach(r=>{
+    const key=Object.keys(GROUP_META).find(k=>r.Prod_group&&r.Prod_group.startsWith(k));
+    if(key)foundGroups.add(key);
+  });
+
+  foundGroups.forEach(key=>{
+    const m=GROUP_META[key];
+    const btn=document.createElement('button');
+    btn.className='fbtn grp-btn';
+    btn.dataset.f=key;
+    btn.textContent=m.label;
+    btn.style.cssText=``;
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      btn.style.background=m.bg;
+      btn.style.borderColor=m.color;
+      btn.style.color=m.color;
+      currentFilter=key;
+      renderTable();
+    });
+    bar.insertBefore(btn,search);
+  });
+}
+
+document.querySelectorAll('.fbtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.fbtn').forEach(b=>{
+      b.classList.remove('active');
+      b.style.background='';b.style.borderColor='';b.style.color='';
+    });
+    btn.classList.add('active');
+    currentFilter=btn.dataset.f;
+    renderTable();
+  });
+});
+document.getElementById('search').addEventListener('input',e=>{
+  currentSearch=e.target.value;renderTable();
+});
+
+// ── CLOCK ──
+function tick(){
+  const n=new Date(),p=v=>String(v).padStart(2,'0');
+  document.getElementById('clk').textContent=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds());
+}
+tick();setInterval(tick,1000);
+
+// ── LOAD DATA ──
+async function loadData(){
+  const url=document.getElementById('spUrl').value.trim();
+  const errEl=document.getElementById('errBanner');
+  let raw=null,source='demo';
+
+  if(url&&url.includes('sharepoint.com')&&!url.includes('dittfirma')){
+    try{
+      const resp=await fetch(url+'?t='+Date.now(),{credentials:'include'});
+      if(!resp.ok)throw new Error('HTTP '+resp.status);
+      const text=await resp.text();
+      // Detect CSV or JSON
+      const trimmed=text.trim();
+      if(trimmed.startsWith('[')||trimmed.startsWith('{')){
+        raw=JSON.parse(trimmed);
+      } else {
+        raw=parseCSV(trimmed);
+      }
+      source='sharepoint';
+      errEl.style.display='none';
+    }catch(e){
+      errEl.textContent='⚠ SharePoint fetch feilet: '+e.message+' — viser demo-data';
+      errEl.style.display='block';
+    }
+  }
+
+  if(!raw){
+    // Demo-data fra CSV-filen din
+    raw=[
+      {Order_nr:"3933353",Item_nr:"300110",Order_name:"Ost & Skinkesalat 255 g NG",Status:"Completed",Prod_group:"FV-SF-Be",Site:"BI-Tranby",Date_delivery:"2026-07-02T12:00:00Z",Date_reportedAF:"2026-07-02T12:00:00Z",QTY_scheduled:"700",QTY_remaining_reportedAF:"0"},
+      {Order_nr:"3933355",Item_nr:"300112",Order_name:"Romano Mix 175g NG",Status:"Completed",Prod_group:"FV-SF-DV",Site:"BI-Tranby",Date_delivery:"2026-07-02T12:00:00Z",Date_reportedAF:"2026-07-02T12:00:00Z",QTY_scheduled:"3300",QTY_remaining_reportedAF:"0"},
+      {Order_nr:"3933361",Item_nr:"300128",Order_name:"Spinat 200 g NG",Status:"Completed",Prod_group:"FV-SF-DV",Site:"BI-Tranby",Date_delivery:"2026-07-02T12:00:00Z",Date_reportedAF:"2026-07-02T12:00:00Z",QTY_scheduled:"2200",QTY_remaining_reportedAF:"0"},
+      {Order_nr:"3933397",Item_nr:"300248",Order_name:"Feldsalat Mix 65 g NG",Status:"Completed",Prod_group:"FV-SF-DV",Site:"BI-Tranby",Date_delivery:"2026-07-02T12:00:00Z",Date_reportedAF:"2026-07-02T12:00:00Z",QTY_scheduled:"4100",QTY_remaining_reportedAF:"0"},
+      {Order_nr:"3933593",Item_nr:"300393",Order_name:"Rødløk skivet 0,5 kg",Status:"Completed",Prod_group:"FV-SF-SK",Site:"BI-Tranby",Date_delivery:"2026-07-02T12:00:00Z",Date_reportedAF:"2026-07-02T12:00:00Z",QTY_scheduled:"1180",QTY_remaining_reportedAF:"0"},
+      {Order_nr:"3933667",Item_nr:"300416",Order_name:"Grønnsaksblanding Julienne 1 kg",Status:"StartedUp",Prod_group:"FV-SF-SK",Site:"BI-Tranby",Date_delivery:"2026-07-09T12:00:00Z",Date_reportedAF:"1900-01-01T12:00:00Z",QTY_scheduled:"50",QTY_remaining_reportedAF:"20"},
+      {Order_nr:"3933771",Item_nr:"BI620033",Order_name:"Ruccula 65 g NG",Status:"StartedUp",Prod_group:"FV-SF-DV",Site:"BI-Tranby",Date_delivery:"2026-07-09T12:00:00Z",Date_reportedAF:"1900-01-01T12:00:00Z",QTY_scheduled:"11000",QTY_remaining_reportedAF:"4500"},
+      {Order_nr:"3934021",Item_nr:"HF200125",Order_name:"HF Salatbar basis",Status:"Completed",Prod_group:"HF",Site:"BI-Tranby",Date_delivery:"2026-07-02T12:00:00Z",Date_reportedAF:"2026-07-02T12:00:00Z",QTY_scheduled:"87.64",QTY_remaining_reportedAF:"0"},
+      {Order_nr:"3934035",Item_nr:"HF200160",Order_name:"HF Råkost mix",Status:"StartedUp",Prod_group:"HF",Site:"BI-Tranby",Date_delivery:"2026-07-09T12:00:00Z",Date_reportedAF:"1900-01-01T12:00:00Z",QTY_scheduled:"463.86",QTY_remaining_reportedAF:"200"},
+      {Order_nr:"3933703",Item_nr:"300462",Order_name:"Paprika rød 15x20 mm 5 kg",Status:"Completed",Prod_group:"FV-SF-Ind",Site:"BI-Tranby",Date_delivery:"2026-07-02T12:00:00Z",Date_reportedAF:"2026-07-02T12:00:00Z",QTY_scheduled:"60",QTY_remaining_reportedAF:"0"},
+      {Order_nr:"3933739",Item_nr:"300492",Order_name:"Løk ternet 10x10 mm 10 kg Salsus",Status:"Scheduled",Prod_group:"FV-SF-Ind",Site:"BI-Tranby",Date_delivery:"2026-07-09T12:00:00Z",Date_reportedAF:"1900-01-01T12:00:00Z",QTY_scheduled:"2340",QTY_remaining_reportedAF:"2340"},
+      {Order_nr:"3933691",Item_nr:"300444",Order_name:"Hodekål finstrimlet 1 kg",Status:"Completed",Prod_group:"FV-SF-SK",Site:"BI-Tranby",Date_delivery:"2026-07-02T12:00:00Z",Date_reportedAF:"2026-07-02T12:00:00Z",QTY_scheduled:"150",QTY_remaining_reportedAF:"0"},
+      {Order_nr:"3933753",Item_nr:"300517",Order_name:"Pølseløk 5x5 mm 250 g 1/6 GN",Status:"Completed",Prod_group:"FV-SF-Be",Site:"BI-Tranby",Date_delivery:"2026-07-02T12:00:00Z",Date_reportedAF:"2026-07-02T12:00:00Z",QTY_scheduled:"12",QTY_remaining_reportedAF:"0"},
+      {Order_nr:"3933585",Item_nr:"300391",Order_name:"Gulrot staver rå 2,5 kg",Status:"Completed",Prod_group:"FV-SF-Vaku",Site:"BI-Tranby",Date_delivery:"2026-07-02T12:00:00Z",Date_reportedAF:"2026-07-02T12:00:00Z",QTY_scheduled:"64",QTY_remaining_reportedAF:"0"},
+    ];
+  }
+
+  allData=process(raw);
+  const s=calcSummary(allData);
+  renderSummary(s);
+  renderMid(s);
+  renderSiste(allData);
+  buildFilterButtons(allData);
+  renderTable();
+  document.getElementById('lastUpdated').textContent=
+    'Sist oppdatert: '+new Date().toLocaleTimeString('nb-NO')+
+    (source==='sharepoint'?' · SharePoint (live)':' · demo-data');
+}
+
+loadData();
+setInterval(loadData,5*60*1000);
+</script>
+</body>
+</html>
