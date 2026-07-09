@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard — BI-Tranby</title>
+<title>Dashboard Posepakking — BI-Tranby</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:system-ui,-apple-system,sans-serif;background:#0d0f14;color:#e8e6e0;min-height:100vh;}
@@ -72,14 +72,14 @@ tbody td:nth-child(2){text-align:left;color:#898781;font-family:monospace;font-s
 <div class="dash">
   <div class="topbar">
     <div class="top-left">
-      <div class="top-title">Dashboard</div>
+      <div class="top-title">Dashboard Posepakking</div>
       <div class="site-badge">BI-Tranby</div>
     </div>
     <div class="top-right">
       <div class="live"><div class="dot"></div>Live</div>
       <div id="clk">--:--:--</div>
       <div class="refresh-info">↻ hvert 5. min</div>
-      <input id="spUrl" value="https://bama.sharepoint.com/sites/ramanan_Prosjekt/Shared Documents/Apps/produksjon.json" title="SharePoint URL til CSV eller JSON-fil">
+      <input id="spUrl" value="https://raw.githubusercontent.com/u8457423799-commits/Dashbord2/main/produksjon.json" title="URL til datafil (JSON eller CSV)">
     </div>
   </div>
 
@@ -412,9 +412,9 @@ async function loadData(){
   const errEl=document.getElementById('errBanner');
   let raw=null,source='demo';
 
-  if(url&&url.includes('sharepoint.com')&&!url.includes('dittfirma')){
+  if(url&&url.length>10){
     try{
-      const resp=await fetch(url+'?t='+Date.now(),{credentials:'include'});
+      const resp=await fetch(url+'?t='+Date.now(),{});
       if(!resp.ok)throw new Error('HTTP '+resp.status);
       const text=await resp.text();
       // Detect CSV or JSON
@@ -424,10 +424,10 @@ async function loadData(){
       } else {
         raw=parseCSV(trimmed);
       }
-      source='sharepoint';
+      source='github';
       errEl.style.display='none';
     }catch(e){
-      errEl.textContent='⚠ SharePoint fetch feilet: '+e.message+' — viser demo-data';
+      errEl.textContent='⚠ Fetch feilet: '+e.message+' — viser demo-data';
       errEl.style.display='block';
     }
   }
@@ -461,7 +461,7 @@ async function loadData(){
   renderTable();
   document.getElementById('lastUpdated').textContent=
     'Sist oppdatert: '+new Date().toLocaleTimeString('nb-NO')+
-    (source==='sharepoint'?' · SharePoint (live)':' · demo-data');
+    (source==='sharepoint'?' · GitHub (live)':' · demo-data');
 }
 
 loadData();
