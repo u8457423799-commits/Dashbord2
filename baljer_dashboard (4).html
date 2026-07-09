@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Posepakking — BI-Tranby</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0d0f14;color:#e8e6e0;min-height:100vh;}
+.dash{display:grid;grid-template-rows:52px auto auto auto;gap:8px;padding:8px;min-height:100vh;}
+.topbar{display:flex;align-items:center;justify-content:space-between;background:#161920;border:0.5px solid #252830;border-radius:10px;padding:0 16px;}
+.top-left{display:flex;align-items:center;gap:12px;}
+.top-title{font-size:15px;font-weight:500;letter-spacing:.01em;}
+.site-badge{font-size:11px;background:#1e2130;color:#6a8fd8;padding:3px 10px;border-radius:20px;border:0.5px solid #2e3650;}
+.top-right{display:flex;align-items:center;gap:16px;font-size:12px;color:#898781;}
+.live{display:flex;align-items:center;gap:5px;}
+.dot{width:7px;height:7px;border-radius:50%;background:#0ca30c;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+#clk{font-family:monospace;font-size:14px;color:#c3c2b7;font-weight:500;}
+.refresh-info{font-size:11px;color:#555;}
+
+/* Topp-summary */
+.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.scard{background:#161920;border:0.5px solid #252830;border-radius:10px;padding:12px 14px;}
+.scard-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+.scard-val{font-size:24px;font-weight:500;line-height:1;}
+.scard-sub{font-size:11px;color:#898781;margin-top:3px;}
+.scard-bar{height:5px;background:#1e2130;border-radius:3px;margin-top:8px;}
+.scard-bar-fill{height:5px;border-radius:3px;}
+
+/* Midtrad: seedometre + kjede-stats */
+.midrow{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;}
+.card{background:#161920;border:0.5px solid #252830;border-radius:10px;padding:12px 14px;}
+.card-title{font-size:10px;font-weight:500;color:#898781;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+
+/* Seedometer */
+.meter-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.meter-pct{font-size:26px;font-weight:500;text-align:center;margin-top:-4px;}
+.meter-sub{font-size:10px;color:#555;text-align:center;}
+.meter-takt{display:flex;justify-content:space-around;width:100%;margin-top:6px;}
+.takt-item{text-align:center;}
+.takt-val{font-size:14px;font-weight:500;}
+.takt-lbl{font-size:10px;color:#555;}
+
+/* Progress bars */
+.pb-row{display:flex;flex-direction:column;gap:6px;flex:1;}
+.pb-item{display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px;font-size:11px;}
+.pb-name{color:#c3c2b7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pb-pct{color:#e8e6e0;font-weight:500;min-width:32px;text-align:right;}
+.pb-track{height:5px;background:#1e2130;border-radius:3px;margin-top:2px;grid-column:1/-1;}
+.pb-fill{height:5px;border-radius:3px;transition:width .8s ease;}
+
+/* Tabell */
+.tbl-wrap{overflow:auto;max-height:calc(100vh - 380px);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{position:sticky;top:0;background:#111318;padding:7px 8px;text-align:right;font-size:10px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;border-bottom:0.5px solid #252830;}
+thead th:first-child{text-align:left;}
+thead th:nth-child(2){text-align:left;}
+tbody tr{border-bottom:0.5px solid #1a1c24;cursor:default;}
+tbody tr:hover{background:#1a1c24;}
+tbody td{padding:6px 8px;text-align:right;color:#c3c2b7;}
+tbody td:first-child{text-align:left;color:#e8e6e0;}
+tbody td:nth-child(2){text-align:left;color:#898781;font-family:monospace;font-size:11px;}
+.tag{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:500;display:inline-block;}
+.tag-rema{background:#0b2d0b;color:#4dd44d;}
+.tag-ng{background:#2d1800;color:#fab219;}
+.tag-sk{background:#0b1e38;color:#6aabf7;}
+.tag-done{background:#1a2a1a;color:#4dd44d;}
+.tag-active{background:#1a1a2a;color:#8888cc;}
+.done-row td{opacity:.7;}
+.done-row td:first-child{opacity:1;}
+.qty-done{color:#4dd44d;font-weight:500;}
+.qty-remaining{color:#e8e6e0;}
+.qty-zero{color:#555;}
+.filter-bar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center;}
+.fbtn{padding:4px 12px;border-radius:20px;border:0.5px solid #2e3040;background:#161920;color:#898781;font-size:11px;cursor:pointer;transition:all .15s;}
+.fbtn:hover{border-color:#6a8fd8;color:#c3c2b7;}
+.fbtn.active{background:#1e2a4a;border-color:#3d5fa0;color:#6aabf7;}
+.fbtn-rema.active{background:#0b2d0b;border-color:#2a6016;color:#4dd44d;}
+.fbtn-ng.active{background:#2d1800;border-color:#8a4000;color:#fab219;}
+.fbtn-sk.active{background:#0b1e38;border-color:#1a4080;color:#6aabf7;}
+.search-wrap{margin-left:auto;}
+#search{background:#1a1c24;border:0.5px solid #2e3040;border-radius:6px;padding:4px 10px;color:#c3c2b7;font-size:11px;width:180px;}
+#search::placeholder{color:#555;}
+.status-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px;}
+.s-done{background:#4dd44d;}
+.s-active{background:#6aabf7;}
+.last-updated{font-size:10px;color:#555;text-align:right;padding:4px 0;}
+.sharepoint-url{font-size:11px;color:#555;padding:4px 8px;background:#111318;border-radius:6px;border:0.5px solid #1e2130;font-family:monospace;cursor:pointer;}
+.sharepoint-url:hover{color:#6a8fd8;border-color:#2e3650;}
+</style>
+</head>
+<body>
+<div class="dash">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="top-left">
+      <div class="top-title">Dashboard Posepakking</div>
+      <div class="site-badge">BI-Tranby</div>
+    </div>
+    <div class="top-right">
+      <div class="live"><div class="dot"></div>Live</div>
+      <div id="clk">--:--:--</div>
+      <div class="refresh-info">Oppdaterer hvert 5. min</div>
+      <input id="spUrl" class="sharepoint-url" 
+        value="https://bama.sharepoint.com/sites/ramanan_Prosjekt/Shared Documents/Apps/produksjon.json"
+        title="Klikk for å endre SharePoint URL"
+        style="width:320px;">
+    </div>
+  </div>
+
+  <!-- SUMMARY ROW -->
+  <div class="summary" id="summaryRow"></div>
+
+  <!-- MIDROW: seedometre + kjede -->
+  <div class="midrow" id="midRow"></div>
+
+  <!-- TABELL -->
+  <div class="card">
+    <div class="filter-bar">
+      <button class="fbtn active" data-f="ALL">Alle</button>
+      <button class="fbtn fbtn-rema" data-f="REMA">REMA</button>
+      <button class="fbtn fbtn-ng" data-f="NG">NG</button>
+      <button class="fbtn fbtn-sk" data-f="SK">SK</button>
+      <button class="fbtn" data-f="DONE" style="">Ferdig ✓</button>
+      <button class="fbtn" data-f="ACTIVE">Pågår</button>
+      <div class="search-wrap">
+        <input id="search" type="text" placeholder="Søk produkt...">
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left;min-width:200px;">Produktnavn</th>
+            <th style="text-align:left;">Varenr</th>
+            <th>Kjede</th>
+            <th>Status</th>
+            <th>Planlagt</th>
+            <th>Ferdigmeldt</th>
+            <th>Gjenstår</th>
+            <th>%</th>
+            <th>Siste kl.</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="last-updated" id="lastUpdated"></div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+// Bytt ut med din faktiske SharePoint URL når du er klar
+const SHAREPOINT_URL = null; // null = bruk demo-data
+
+// ── DEMO DATA (fra din eksporterte JSON) ──
+const DEMO_DATA = [{"Order_nr":"3931811","Order_name":"Babyleaf Mix 250 g","Item_nr":"300385","Status":"StartedUp","QTY_scheduled":"90","Qty":"","QTY_remaining_reportedAF":"90","SisteKlokkeslett":"","Kjede":"SK"},{"Order_nr":"3931875","Order_name":"Babyleaf Mix 65 g NG","Item_nr":"300096","Status":"StartedUp","QTY_scheduled":"8500","Qty":"7632","QTY_remaining_reportedAF":"868","SisteKlokkeslett":"0.487743055555556","Kjede":"NG"},{"Order_nr":"3932087","Order_name":"Babyleaf Mix 65 g Rema","Item_nr":"300371","Status":"StartedUp","QTY_scheduled":"4500","Qty":"4650","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.374097222222222","Kjede":"REMA"},{"Order_nr":"3932215","Order_name":"Babyleaf Mix med rødbeter 90 g Rema","Item_nr":"302854","Status":"StartedUp","QTY_scheduled":"800","Qty":"","QTY_remaining_reportedAF":"800","SisteKlokkeslett":"","Kjede":"REMA"},{"Order_nr":"3931821","Order_name":"Babyspinat 125 g SB","Item_nr":"BI620120","Status":"StartedUp","QTY_scheduled":"390","Qty":"","QTY_remaining_reportedAF":"390","SisteKlokkeslett":"","Kjede":"SK"},{"Order_nr":"3932349","Order_name":"Babyspinat 65 g FP Rema","Item_nr":"303053","Status":"StartedUp","QTY_scheduled":"2600","Qty":"","QTY_remaining_reportedAF":"2600","SisteKlokkeslett":"","Kjede":"REMA"},{"Order_nr":"3932255","Order_name":"Babyspinat 65 g NG","Item_nr":"300199","Status":"StartedUp","QTY_scheduled":"7200","Qty":"","QTY_remaining_reportedAF":"7200","SisteKlokkeslett":"","Kjede":"NG"},{"Order_nr":"3932371","Order_name":"Bistrosalat 400 g","Item_nr":"300380","Status":"StartedUp","QTY_scheduled":"1600","Qty":"","QTY_remaining_reportedAF":"1600","SisteKlokkeslett":"","Kjede":"SK"},{"Order_nr":"3931989","Order_name":"Hodekål finstrimlet 1 kg","Item_nr":"300444","Status":"ReportedFinished","QTY_scheduled":"170","Qty":"185","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.450185185185185","Kjede":"SK"},{"Order_nr":"3931943","Order_name":"Isberg Mix (6/250 g) Rema","Item_nr":"300309","Status":"ReportedFinished","QTY_scheduled":"3000","Qty":"3048","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.453148148148148","Kjede":"REMA"},{"Order_nr":"3931913","Order_name":"Isberg Mix 250 g 6 po/ks NG","Item_nr":"300301","Status":"StartedUp","QTY_scheduled":"5900","Qty":"6084","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.401805555555556","Kjede":"NG"},{"Order_nr":"3931823","Order_name":"Ruccula 65 g NG","Item_nr":"BI620033","Status":"StartedUp","QTY_scheduled":"14800","Qty":"4800","QTY_remaining_reportedAF":"10000","SisteKlokkeslett":"0.491851851851852","Kjede":"NG"},{"Order_nr":"3931909","Order_name":"Ruccula 65 g Rema","Item_nr":"300370","Status":"StartedUp","QTY_scheduled":"12000","Qty":"6240","QTY_remaining_reportedAF":"5760","SisteKlokkeslett":"0.490532407407407","Kjede":"REMA"},{"Order_nr":"3932007","Order_name":"Romano Mix 175 g FP Rema","Item_nr":"303056","Status":"StartedUp","QTY_scheduled":"3500","Qty":"1440","QTY_remaining_reportedAF":"2060","SisteKlokkeslett":"0.490428240740741","Kjede":"REMA"},{"Order_nr":"3932279","Order_name":"Romano Mix 175g NG","Item_nr":"300112","Status":"StartedUp","QTY_scheduled":"5000","Qty":"","QTY_remaining_reportedAF":"5000","SisteKlokkeslett":"","Kjede":"NG"},{"Order_nr":"3931799","Order_name":"Kinakål kuttet 5 mm 1 kg","Item_nr":"300401","Status":"ReportedFinished","QTY_scheduled":"160","Qty":"185","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.421284722222222","Kjede":"SK"},{"Order_nr":"3931889","Order_name":"Råkostblanding 1 kg","Item_nr":"300396","Status":"ReportedFinished","QTY_scheduled":"490","Qty":"515","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.480798611111111","Kjede":"SK"},{"Order_nr":"3931835","Order_name":"Råkostblanding m/rødkål og purre 1 kg","Item_nr":"300543","Status":"ReportedFinished","QTY_scheduled":"20","Qty":"25","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.491759259259259","Kjede":"SK"},{"Order_nr":"3932219","Order_name":"Isbergsalat 10 mm 0,5 kg","Item_nr":"300383","Status":"ReportedFinished","QTY_scheduled":"128","Qty":"128","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.471030092592593","Kjede":"SK"},{"Order_nr":"3932203","Order_name":"Isbergsalat 10 mm 1 kg","Item_nr":"300381","Status":"StartedUp","QTY_scheduled":"2200","Qty":"2205","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.411354166666667","Kjede":"SK"},{"Order_nr":"3931817","Order_name":"Isbergsalat 10 mm 700 g SB","Item_nr":"300109","Status":"StartedUp","QTY_scheduled":"800","Qty":"813","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.472488425925926","Kjede":"SK"},{"Order_nr":"3932159","Order_name":"Isbergsalat 6x150 g Rema","Item_nr":"302306","Status":"StartedUp","QTY_scheduled":"2300","Qty":"2328","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.474039351851852","Kjede":"REMA"},{"Order_nr":"3931951","Order_name":"Isbergsalat Bigmac 1 kg McDonalds","Item_nr":"300478","Status":"StartedUp","QTY_scheduled":"2440","Qty":"2460","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.487592592592593","Kjede":"SK"},{"Order_nr":"3932377","Order_name":"Isbergsalat Lavpris 1 kg","Item_nr":"300788","Status":"StartedUp","QTY_scheduled":"620","Qty":"665","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.46400462962963","Kjede":"SK"},{"Order_nr":"3931925","Order_name":"Rødløk skivet 0,5 kg","Item_nr":"300393","Status":"StartedUp","QTY_scheduled":"1310","Qty":"1560","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.479513888888889","Kjede":"SK"},{"Order_nr":"3931993","Order_name":"Rødløk ternet 10x10 mm 0,5 kg","Item_nr":"300550","Status":"StartedUp","QTY_scheduled":"130","Qty":"160","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.483472222222222","Kjede":"SK"},{"Order_nr":"3932361","Order_name":"Løk skivet 1 kg","Item_nr":"300392","Status":"StartedUp","QTY_scheduled":"450","Qty":"495","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.430208333333333","Kjede":"SK"},{"Order_nr":"3932071","Order_name":"Løk skivet 1 kg McDonalds","Item_nr":"300441","Status":"StartedUp","QTY_scheduled":"455","Qty":"495","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.390729166666667","Kjede":"SK"},{"Order_nr":"3932437","Order_name":"Meksikansk KIT 270 g Rema","Item_nr":"300366","Status":"StartedUp","QTY_scheduled":"500","Qty":"508","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.402349537037037","Kjede":"REMA"},{"Order_nr":"3931991","Order_name":"Meksikansk Mix 270 g NG","Item_nr":"300203","Status":"StartedUp","QTY_scheduled":"1300","Qty":"1516","QTY_remaining_reportedAF":"0","SisteKlokkeslett":"0.447824074074074","Kjede":"NG"},{"Order_nr":"3932277","Order_name":"Romanosalat 10 mm 500 g SB","Item_nr":"300053","Status":"StartedUp","QTY_scheduled":"450","Qty":"168","QTY_remaining_reportedAF":"282","SisteKlokkeslett":"0.493657407407407","Kjede":"SK"},{"Order_nr":"3932365","Order_name":"Wok Mix Basis 1 kg","Item_nr":"300428","Status":"StartedUp","QTY_scheduled":"250","Qty":"160","QTY_remaining_reportedAF":"90","SisteKlokkeslett":"0.493912037037037","Kjede":"SK"},{"Order_nr":"3932263","Order_name":"Middelhavs Mix 100 g NG","Item_nr":"BI620030","Status":"StartedUp","QTY_scheduled":"4500","Qty":"","QTY_remaining_reportedAF":"4500","SisteKlokkeslett":"","Kjede":"NG"},{"Order_nr":"3932039","Order_name":"Middelhavsalat 400 g","Item_nr":"300473","Status":"StartedUp","QTY_scheduled":"1430","Qty":"","QTY_remaining_reportedAF":"1430","SisteKlokkeslett":"","Kjede":"SK"},{"Order_nr":"3931871","Order_name":"Middelhavsalat 80 g FP Rema","Item_nr":"303052","Status":"StartedUp","QTY_scheduled":"2600","Qty":"","QTY_remaining_reportedAF":"2600","SisteKlokkeslett":"","Kjede":"REMA"},{"Order_nr":"3932355","Order_name":"Ruccula Mix 175 g NG","Item_nr":"300127","Status":"StartedUp","QTY_scheduled":"2900","Qty":"","QTY_remaining_reportedAF":"2900","SisteKlokkeslett":"","Kjede":"NG"},{"Order_nr":"3932311","Order_name":"Spinat 200 g Rema","Item_nr":"300377","Status":"StartedUp","QTY_scheduled":"2300","Qty":"","QTY_remaining_reportedAF":"2300","SisteKlokkeslett":"","Kjede":"REMA"},{"Order_nr":"3932009","Order_name":"Spinat 200 g NG","Item_nr":"300128","Status":"StartedUp","QTY_scheduled":"2900","Qty":"","QTY_remaining_reportedAF":"2900","SisteKlokkeslett":"","Kjede":"NG"}];
+
+// ── HELPERS ──
+function n(v){return v?parseInt(v)||0:0;}
+function pct(done,plan){return plan>0?Math.round(done/plan*100):0;}
+function fmtTime(dec){
+  if(!dec||dec==='')return '—';
+  const d=parseFloat(dec);
+  const tot=Math.round(d*24*60);
+  const h=Math.floor(tot/60);
+  const m=tot%60;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+function fmt(v){return n(v).toLocaleString('nb-NO');}
+
+// ── DATA PROCESSING ──
+function process(data){
+  return data.map(r=>({
+    ...r,
+    plan:n(r.QTY_scheduled),
+    done:n(r.Qty),
+    remaining:n(r.QTY_remaining_reportedAF),
+    pct:pct(n(r.Qty),n(r.QTY_scheduled)),
+    isDone:r.Status==='ReportedFinished'
+  }));
+}
+
+function calcSummary(data){
+  const totPlan=data.reduce((s,r)=>s+r.plan,0);
+  const totDone=data.reduce((s,r)=>s+r.done,0);
+  const totRemain=data.reduce((s,r)=>s+r.remaining,0);
+  const doneOrders=data.filter(r=>r.isDone).length;
+  const totalOrders=data.length;
+  const groups={REMA:{plan:0,done:0},NG:{plan:0,done:0},SK:{plan:0,done:0}};
+  data.forEach(r=>{
+    if(groups[r.Kjede]){groups[r.Kjede].plan+=r.plan;groups[r.Kjede].done+=r.done;}
+  });
+  return{totPlan,totDone,totRemain,doneOrders,totalOrders,groups,totalPct:pct(totDone,totPlan)};
+}
+
+// ── RENDER SUMMARY ──
+function renderSummary(s){
+  const el=document.getElementById('summaryRow');
+  el.innerHTML=`
+    <div class="scard">
+      <div class="scard-label">Plan totalt</div>
+      <div class="scard-val">${fmt(s.totPlan)}</div>
+      <div class="scard-sub">stk alle kjeder</div>
+    </div>
+    <div class="scard">
+      <div class="scard-label">Ferdigmeldt</div>
+      <div class="scard-val" style="color:#4dd44d;">${fmt(s.totDone)}</div>
+      <div class="scard-sub">${s.totalPct}% av plan</div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${s.totalPct}%;background:#4dd44d;"></div></div>
+    </div>
+    <div class="scard">
+      <div class="scard-label">Gjenstår</div>
+      <div class="scard-val" style="color:#e34948;">${fmt(s.totRemain)}</div>
+      <div class="scard-sub">stk</div>
+    </div>
+    <div class="scard">
+      <div class="scard-label">Ordre ferdig</div>
+      <div class="scard-val">${s.doneOrders}<span style="font-size:14px;color:#555;"> / ${s.totalOrders}</span></div>
+      <div class="scard-sub">ReportedFinished</div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${Math.round(s.doneOrders/s.totalOrders*100)}%;background:#6aabf7;"></div></div>
+    </div>
+    <div class="scard">
+      <div class="scard-label">Posepakking totalt</div>
+      <div class="scard-val" style="color:${s.totalPct<30?'#e34948':s.totalPct<70?'#fab219':'#4dd44d'};">${s.totalPct}%</div>
+      <div class="scard-sub">Seedometer total</div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${s.totalPct}%;background:${s.totalPct<30?'#e34948':s.totalPct<70?'#fab219':'#4dd44d'};"></div></div>
+    </div>`;
+}
+
+// ── RENDER GAUGES ──
+function makeSVGMeter(pctVal,color){
+  const r=54,cx=70,cy=68;
+  const startA=-Math.PI,endA=0;
+  const fillEnd=startA+(endA-startA)*(pctVal/100);
+  const x1=cx+r*Math.cos(startA),y1=cy+r*Math.sin(startA);
+  const x2=cx+r*Math.cos(fillEnd),y2=cy+r*Math.sin(fillEnd);
+  const lg=(fillEnd-startA)>Math.PI?1:0;
+  const nx=cx+r*Math.cos(fillEnd),ny=cy+r*Math.sin(fillEnd);
+  return `<svg viewBox="0 0 140 80" width="140" height="80">
+    <path d="M${cx-r} ${cy} A${r} ${r} 0 0 1 ${cx+r} ${cy}" fill="none" stroke="#1e2130" stroke-width="12" stroke-linecap="round"/>
+    ${pctVal>0?`<path d="M${x1} ${y1} A${r} ${r} 0 ${lg} 1 ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round"/>`:''}
+    <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="#e8e6e0" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="4" fill="#e8e6e0"/>
+  </svg>`;
+}
+
+function renderMid(s){
+  const el=document.getElementById('midRow');
+  const chains=[
+    {k:'REMA',label:'REMA',color:'#4dd44d'},
+    {k:'NG',label:'NG',color:'#fab219'},
+    {k:'SK',label:'SK',color:'#6aabf7'},
+  ];
+  let html='';
+  chains.forEach(c=>{
+    const g=s.groups[c.k];
+    const p=pct(g.done,g.plan);
+    html+=`<div class="card">
+      <div class="card-title" style="color:${c.color};">${c.label}</div>
+      <div class="meter-wrap">
+        ${makeSVGMeter(p,c.color)}
+        <div class="meter-pct" style="color:${c.color};">${p}%</div>
+        <div class="meter-sub">${fmt(g.done)} / ${fmt(g.plan)} stk</div>
+        <div class="meter-takt">
+          <div class="takt-item"><div class="takt-val">${fmt(g.done)}</div><div class="takt-lbl">Ferdig</div></div>
+          <div class="takt-item"><div class="takt-val" style="color:#e34948;">${fmt(g.plan-g.done)}</div><div class="takt-lbl">Gjenstår</div></div>
+        </div>
+      </div>
+    </div>`;
+  });
+  // Siste kl. card
+  html+=`<div class="card">
+    <div class="card-title">Siste aktivitet</div>
+    <div class="pb-row" id="sisteKlCard"></div>
+  </div>`;
+  el.innerHTML=html;
+}
+
+function renderSisteKl(data){
+  const active=data.filter(r=>r.SisteKlokkeslett&&r.SisteKlokkeslett!='')
+    .sort((a,b)=>parseFloat(b.SisteKlokkeslett)-parseFloat(a.SisteKlokkeslett))
+    .slice(0,6);
+  const el=document.getElementById('sisteKlCard');
+  if(!el)return;
+  el.innerHTML=active.map(r=>`
+    <div class="pb-item">
+      <div class="pb-name">${r.Order_name}</div>
+      <div class="pb-pct" style="color:${r.Kjede==='REMA'?'#4dd44d':r.Kjede==='NG'?'#fab219':'#6aabf7'};">${fmtTime(r.SisteKlokkeslett)}</div>
+    </div>`).join('');
+}
+
+// ── RENDER TABLE ──
+let currentFilter='ALL', currentSearch='', allData=[];
+
+function renderTable(){
+  const q=currentSearch.toLowerCase();
+  const rows=allData.filter(r=>{
+    if(currentFilter==='DONE') return r.isDone;
+    if(currentFilter==='ACTIVE') return !r.isDone && r.done>0;
+    if(currentFilter==='ALL') return true;
+    return r.Kjede===currentFilter;
+  }).filter(r=>!q||r.Order_name.toLowerCase().includes(q)||r.Item_nr.toLowerCase().includes(q)||r.Order_nr.includes(q));
+
+  const tbody=document.getElementById('tbody');
+  tbody.innerHTML=rows.map(r=>{
+    const tagClass=r.Kjede==='REMA'?'tag-rema':r.Kjede==='NG'?'tag-ng':'tag-sk';
+    const doneClass=r.isDone?'tag-done':'tag-active';
+    const doneLabel=r.isDone?'Ferdig':'Pågår';
+    const dotCls=r.isDone?'s-done':'s-active';
+    const pctColor=r.pct>=100?'#4dd44d':r.pct>0?'#6aabf7':'#555';
+    return `<tr class="${r.isDone?'done-row':''}">
+      <td>${r.Order_name}</td>
+      <td>${r.Item_nr}</td>
+      <td><span class="tag ${tagClass}">${r.Kjede}</span></td>
+      <td><span class="status-dot ${dotCls}"></span><span style="font-size:11px;color:#898781;">${doneLabel}</span></td>
+      <td>${fmt(r.plan)}</td>
+      <td class="${r.done>0?'qty-done':'qty-zero'}">${r.done>0?fmt(r.done):'—'}</td>
+      <td class="${r.remaining>0?'qty-remaining':'qty-zero'}">${r.remaining>0?fmt(r.remaining):'—'}</td>
+      <td style="color:${pctColor};font-weight:500;">${r.pct>0?r.pct+'%':'—'}</td>
+      <td style="font-family:monospace;color:#898781;">${fmtTime(r.SisteKlokkeslett)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── FILTER BUTTONS ──
+document.querySelectorAll('.fbtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter=btn.dataset.f;
+    renderTable();
+  });
+});
+document.getElementById('search').addEventListener('input',e=>{
+  currentSearch=e.target.value;
+  renderTable();
+});
+
+// ── CLOCK ──
+function tick(){
+  const n=new Date();
+  const p=v=>String(v).padStart(2,'0');
+  document.getElementById('clk').textContent=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds());
+}
+tick();setInterval(tick,1000);
+
+// ── LOAD DATA ──
+async function loadData(){
+  const url=document.getElementById('spUrl').value.trim();
+  let data=null;
+  if(url && url.includes('sharepoint.com') && !url.includes('dittfirma')){
+    try{
+      const resp=await fetch(url,{headers:{'Accept':'application/json'}});
+      if(resp.ok){data=await resp.json();}
+    }catch(e){console.warn('SharePoint fetch feilet, bruker demo-data:',e);}
+  }
+  if(!data)data=DEMO_DATA;
+  allData=process(data);
+  const s=calcSummary(allData);
+  renderSummary(s);
+  renderMid(s);
+  renderSisteKl(allData);
+  renderTable();
+  document.getElementById('lastUpdated').textContent=
+    'Sist oppdatert: '+new Date().toLocaleTimeString('nb-NO')+(data===DEMO_DATA?' (demo-data)':' (SharePoint)');
+}
+
+loadData();
+setInterval(loadData,5*60*1000); // hvert 5. minutt
+</script>
+</body>
+</html>
