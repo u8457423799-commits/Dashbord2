@@ -180,13 +180,15 @@ function statusColor(s){
 // ── PROCESS DATA ──
 function process(raw){
   return raw
-    .filter(r=>r.Site==='BI-Tranby')
+    .filter(r=>!r.Site||r.Site==='BI-Tranby')
     .map(r=>{
       const plan=n(r.QTY_scheduled);
       const remaining=n(r.QTY_remaining_reportedAF);
-      const done=Math.max(0,plan-remaining);
+      const doneFromQty=n(r.Qty);
+      const doneFromRemaining=Math.max(0,plan-remaining);
+      const done=doneFromQty>0?doneFromQty:doneFromRemaining;
       const p=pct(done,plan);
-      const isDone=r.Status==='Completed'||r.Status==='ReportedFinished';
+      const isDone=r.Status==='Completed'||r.Status==='ReportedFinished'||(remaining===0&&done>0);
       const isActive=r.Status==='StartedUp'&&done>0;
       const isScheduled=r.Status==='Scheduled'||r.Status==='CostEstimated';
       return{...r,plan,remaining,done,pct:p,isDone,isActive,isScheduled};
