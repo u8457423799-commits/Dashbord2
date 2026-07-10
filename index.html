@@ -183,11 +183,11 @@ function process(raw){
     .filter(r=>!r.Site||r.Site==='BI-Tranby')
     .map(r=>{
       const plan=n(r.QTY_scheduled);
-      const remaining=n(r.QTY_remaining_reportedAF);
-      const doneFromQty=n(r.Qty);
-      const doneFromRemaining=Math.max(0,plan-remaining);
-      const done=doneFromQty>0?doneFromQty:doneFromRemaining;
-      const p=pct(done,plan);
+      // Støtter begge formater: QTY_good (ny) og Qty (gammel)
+      const done=n(r.QTY_good)||n(r.Qty)||Math.max(0,plan-n(r.QTY_remaining_reportedAF));
+      // Støtter begge formater: QTY_remaining (ny) og QTY_remaining_reportedAF (gammel)
+      const remaining=n(r.QTY_remaining)||n(r.QTY_remaining_reportedAF);
+      const p=n(r.PCT_done)||pct(done,plan);
       const isDone=r.Status==='Completed'||r.Status==='ReportedFinished'||(remaining===0&&done>0);
       const isActive=r.Status==='StartedUp'&&done>0;
       const isScheduled=r.Status==='Scheduled'||r.Status==='CostEstimated';
