@@ -72,7 +72,7 @@ tbody td:nth-child(2){text-align:left;color:#898781;font-family:monospace;font-s
 <div class="dash">
   <div class="topbar">
     <div class="top-left">
-      <div class="top-title">Dashboard</div>
+      <div class="top-title">Dashboard Posepakking</div>
       <div class="site-badge">BI-Tranby</div>
     </div>
     <div class="top-right">
@@ -414,9 +414,9 @@ async function loadData(){
   const errEl=document.getElementById('errBanner');
   let raw=null,source='demo';
 
-  if(url&&url.length>10){
+  if(url&&url.length>10&&url.startsWith('http')){
     try{
-      const resp=await fetch(url+'?t='+Date.now(),{});
+      const resp=await fetch(url+'?nocache='+Date.now(),{cache:'no-store',mode:'cors'});
       if(!resp.ok)throw new Error('HTTP '+resp.status);
       const text=await resp.text();
       // Detect CSV or JSON
@@ -429,7 +429,7 @@ async function loadData(){
       source='github';
       errEl.style.display='none';
     }catch(e){
-      errEl.textContent='⚠ Fetch feilet: '+e.message+' — viser demo-data';
+      errEl.textContent='⚠ Kan ikke hente fra GitHub: '+e.message+' — viser demo-data';
       errEl.style.display='block';
     }
   }
@@ -463,7 +463,7 @@ async function loadData(){
   renderTable();
   document.getElementById('lastUpdated').textContent=
     'Sist oppdatert: '+new Date().toLocaleTimeString('nb-NO')+
-    (source==='sharepoint'?' · GitHub (live)':' · demo-data');
+    (source==='github'?' · GitHub (live) ✅':' · demo-data — GitHub ikke tilgjengelig');
 }
 
 loadData();
