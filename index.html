@@ -46,7 +46,9 @@ table{width:100%;border-collapse:collapse;font-size:12px;}
 thead th{position:sticky;top:0;background:#111318;padding:7px 8px;text-align:right;font-size:10px;font-weight:500;color:#555;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;border-bottom:0.5px solid #252830;}
 thead th:first-child,thead th:nth-child(2){text-align:left;}
 tbody tr{border-bottom:0.5px solid #1a1c24;}
-tbody tr:hover{background:#1a1c24;}
+tbody tr{cursor:pointer;transition:background .15s;}
+tbody tr:hover{background:#252a3a;}
+tbody tr.selected{background:#1e2a4a;border-left:3px solid #6aabf7;}
 tbody td{padding:5px 8px;text-align:right;color:#c3c2b7;}
 tbody td:first-child{text-align:left;color:#e8e6e0;}
 tbody td:nth-child(2){text-align:left;color:#898781;font-family:monospace;font-size:11px;}
@@ -397,6 +399,15 @@ document.querySelectorAll('.fbtn').forEach(btn=>{
     renderTable();
   });
 });
+// Row click highlight
+document.getElementById('tbody').addEventListener('click', e => {
+  const row = e.target.closest('tr');
+  if (!row) return;
+  const wasSelected = row.classList.contains('selected');
+  document.querySelectorAll('#tbody tr').forEach(r => r.classList.remove('selected'));
+  if (!wasSelected) row.classList.add('selected');
+});
+
 document.getElementById('search').addEventListener('input',e=>{
   currentSearch=e.target.value;renderTable();
 });
