@@ -21,7 +21,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0d0f14;color:#e8
 #spUrl{font-size:11px;color:#555;padding:4px 8px;background:#111318;border-radius:6px;border:0.5px solid #1e2130;font-family:monospace;width:340px;outline:none;}
 #spUrl:focus{border-color:#2e3650;color:#6a8fd8;}
 
-.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.summary{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
 .scard{background:#161920;border:0.5px solid #252830;border-radius:10px;padding:12px 14px;}
 .scard-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
 .scard-val{font-size:24px;font-weight:500;line-height:1;}
@@ -74,7 +74,7 @@ tbody td:nth-child(2){text-align:left;color:#898781;font-family:monospace;font-s
 <div class="dash">
   <div class="topbar">
     <div class="top-left">
-      <div class="top-title">Dashboard Posepakking</div>
+      <div class="top-title">Dashboard Tranby</div>
       <div class="site-badge">BI-Tranby</div>
     </div>
     <div class="top-right">
@@ -198,6 +198,10 @@ function process(raw){
 }
 
 // ── SUMMARY ──
+const FV_GROUPS=['FV-SF-DV','FV-SF-SK','FV-SF-Vaku','FV-SF-Ind','FV-SF-Be'];
+function isFV(r){return r.Prod_group&&FV_GROUPS.some(g=>r.Prod_group.startsWith(g));}
+function isHF(r){return r.Prod_group&&r.Prod_group.startsWith('HF');}
+
 function calcSummary(data){
   const totPlan=data.reduce((s,r)=>s+r.plan,0);
   const totDone=data.reduce((s,r)=>s+r.done,0);
@@ -205,6 +209,16 @@ function calcSummary(data){
   const doneOrders=data.filter(r=>r.isDone).length;
   const activeOrders=data.filter(r=>r.Status==='StartedUp').length;
   const totalOrders=data.length;
+  // FV
+  const fvData=data.filter(isFV);
+  const fvPlan=fvData.reduce((s,r)=>s+r.plan,0);
+  const fvDone=fvData.reduce((s,r)=>s+r.done,0);
+  const fvRemain=fvData.reduce((s,r)=>s+r.remaining,0);
+  // HF
+  const hfData=data.filter(isHF);
+  const hfPlan=hfData.reduce((s,r)=>s+r.plan,0);
+  const hfDone=hfData.reduce((s,r)=>s+r.done,0);
+  const hfRemain=hfData.reduce((s,r)=>s+r.remaining,0);
   // Per prod_group
   const groups={};
   data.forEach(r=>{
@@ -214,28 +228,40 @@ function calcSummary(data){
     groups[key].done+=r.done;
     groups[key].remaining+=r.remaining;
   });
-  return{totPlan,totDone,totRemain,doneOrders,activeOrders,totalOrders,groups,totalPct:pct(totDone,totPlan)};
+  return{totPlan,totDone,totRemain,doneOrders,activeOrders,totalOrders,groups,totalPct:pct(totDone,totPlan),
+    fvPlan,fvDone,fvRemain,fvPct:pct(fvDone,fvPlan),
+    hfPlan,hfDone,hfRemain,hfPct:pct(hfDone,hfPlan)};
 }
 
 // ── RENDER SUMMARY ──
 function renderSummary(s){
   const col=s.totalPct<30?'#e34948':s.totalPct<70?'#fab219':'#4dd44d';
+  const fvCol=s.fvPct<30?'#e34948':s.fvPct<70?'#fab219':'#4dd44d';
+  const hfCol=s.hfPct<30?'#e34948':s.hfPct<70?'#fab219':'#4dd44d';
   document.getElementById('summaryRow').innerHTML=`
-    <div class="scard">
-      <div class="scard-label">Plan totalt</div>
-      <div class="scard-val">${fmt(s.totPlan)}</div>
-      <div class="scard-sub">stk — BI-Tranby</div>
+    <div class="scard" style="background:#0d1a0d;border-color:#1a3a1a;">
+      <div class="scard-label" style="color:#2a6016;">Plan FV</div>
+      <div class="scard-val">${fmt(s.fvPlan)}</div>
+      <div class="scard-sub">${s.fvPct}% ferdig · stk</div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${Math.min(s.fvPct,100)}%;background:${fvCol};"></div></div>
     </div>
-    <div class="scard">
-      <div class="scard-label">Ferdigmeldt</div>
-      <div class="scard-val" style="color:#4dd44d;">${fmt(s.totDone)}</div>
-      <div class="scard-sub">${s.totalPct}% av plan</div>
-      <div class="scard-bar"><div class="scard-bar-fill" style="width:${s.totalPct}%;background:#4dd44d;"></div></div>
+    <div class="scard" style="background:#0d1a0d;border-color:#1a3a1a;">
+      <div class="scard-label" style="color:#2a6016;">Ferdigmeldt FV</div>
+      <div class="scard-val" style="color:#4dd44d;">${fmt(s.fvDone)}</div>
+      <div class="scard-sub">Gjenstår: ${fmt(s.fvRemain)} stk</div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${Math.min(s.fvPct,100)}%;background:${fvCol};"></div></div>
     </div>
-    <div class="scard">
-      <div class="scard-label">Gjenstår</div>
-      <div class="scard-val" style="color:#e34948;">${fmt(s.totRemain)}</div>
-      <div class="scard-sub">stk</div>
+    <div class="scard" style="background:#0d0d1a;border-color:#1a1a3a;">
+      <div class="scard-label" style="color:#1a3a8a;">Plan HF</div>
+      <div class="scard-val">${fmt(s.hfPlan)}</div>
+      <div class="scard-sub">${s.hfPct}% ferdig · kg</div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${Math.min(s.hfPct,100)}%;background:${hfCol};"></div></div>
+    </div>
+    <div class="scard" style="background:#0d0d1a;border-color:#1a1a3a;">
+      <div class="scard-label" style="color:#1a3a8a;">Ferdigmeldt HF</div>
+      <div class="scard-val" style="color:#4dd44d;">${fmt(s.hfDone)}</div>
+      <div class="scard-sub">Gjenstår: ${fmt(s.hfRemain)} kg</div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${Math.min(s.hfPct,100)}%;background:${hfCol};"></div></div>
     </div>
     <div class="scard">
       <div class="scard-label">Ordre status</div>
@@ -247,7 +273,7 @@ function renderSummary(s){
       <div class="scard-label">Seedometer total</div>
       <div class="scard-val" style="color:${col};">${s.totalPct}%</div>
       <div class="scard-sub">Posepakking totalt</div>
-      <div class="scard-bar"><div class="scard-bar-fill" style="width:${s.totalPct}%;background:${col};"></div></div>
+      <div class="scard-bar"><div class="scard-bar-fill" style="width:${Math.min(s.totalPct,100)}%;background:${col};"></div></div>
     </div>`;
 }
 
@@ -270,7 +296,7 @@ function makeSVGMeter(pctVal,color){
 // ── RENDER MID (gruppe-seedometre) ──
 function renderMid(s){
   const mainGroups=Object.keys(GROUP_META);
-  const cols=mainGroups.length+1;
+  const cols=mainGroups.length;
   document.getElementById('midRow').style.gridTemplateColumns=`repeat(${cols},1fr)`;
 
   let html='';
@@ -292,29 +318,10 @@ function renderMid(s){
     </div>`;
   });
 
-  // Siste oppdaterte ordre
-  html+=`<div class="card">
-    <div class="card-title">Siste ferdigmeldt</div>
-    <div id="sisteKlCard" style="display:flex;flex-direction:column;gap:6px;"></div>
-  </div>`;
   document.getElementById('midRow').innerHTML=html;
 }
 
-function renderSiste(data){
-  const el=document.getElementById('sisteKlCard');
-  if(!el)return;
-  const recent=data
-    .filter(r=>r.isDone&&r.Date_reportedAF&&!r.Date_reportedAF.startsWith('1900'))
-    .sort((a,b)=>new Date(b.Date_reportedAF)-new Date(a.Date_reportedAF))
-    .slice(0,6);
-  el.innerHTML=recent.map(r=>{
-    const m=groupMeta(r.Prod_group);
-    return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;">
-      <div style="color:#c3c2b7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${r.Order_name}</div>
-      <div style="color:${m.color};margin-left:8px;white-space:nowrap;">${fmtDate(r.Date_reportedAF)}</div>
-    </div>`;
-  }).join('');
-}
+function renderSiste(data){}
 
 // ── RENDER TABLE ──
 let currentFilter='ALL',currentSearch='',allData=[];
