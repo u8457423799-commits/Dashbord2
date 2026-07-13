@@ -74,7 +74,7 @@ tbody td:nth-child(2){text-align:left;color:#898781;font-family:monospace;font-s
 <div class="dash">
   <div class="topbar">
     <div class="top-left">
-      <div class="top-title">Dashboard Tranby</div>
+      <div class="top-title">Dashboard Posepakking</div>
       <div class="site-badge">BI-Tranby</div>
     </div>
     <div class="top-right">
@@ -340,7 +340,7 @@ function renderTable(){
     r.Order_name.toLowerCase().includes(q)||
     (r.Item_nr||'').toLowerCase().includes(q)||
     (r.Order_nr||'').includes(q)
-  );
+  ).sort((a,b)=>a.Order_name.localeCompare(b.Order_name,'nb'));
 
   document.getElementById('tbody').innerHTML=rows.map(r=>{
     const m=groupMeta(r.Prod_group);
