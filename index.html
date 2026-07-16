@@ -18,8 +18,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0d0f14;color:#e8
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 #clk{font-family:monospace;font-size:14px;color:#c3c2b7;font-weight:500;}
 .refresh-info{font-size:11px;color:#555;}
-#spUrl{font-size:11px;color:#555;padding:4px 8px;background:#111318;border-radius:6px;border:0.5px solid #1e2130;font-family:monospace;width:340px;outline:none;}
-#spUrl:focus{border-color:#2e3650;color:#6a8fd8;}
 
 .summary{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
 .scard{background:#161920;border:0.5px solid #252830;border-radius:10px;padding:12px 14px;}
@@ -74,14 +72,13 @@ tbody td:nth-child(2){text-align:left;color:#898781;font-family:monospace;font-s
 <div class="dash">
   <div class="topbar">
     <div class="top-left">
-      <div class="top-title">Dashboard Tranby</div>
+      <div class="top-title">Dashboard Posepakking</div>
       <div class="site-badge">BI-Tranby</div>
     </div>
     <div class="top-right">
       <div class="live"><div class="dot"></div>Live</div>
       <div id="clk">--:--:--</div>
       <div class="refresh-info">↻ hvert 5. min</div>
-      <input id="spUrl" value="https://raw.githubusercontent.com/u8457423799-commits/Dashbord2/main/produksjon.json" title="URL til datafil (JSON eller CSV)">
     </div>
   </div>
 
@@ -272,7 +269,7 @@ function renderSummary(s){
     <div class="scard">
       <div class="scard-label">Seedometer total</div>
       <div class="scard-val" style="color:${col};">${s.totalPct}%</div>
-      <div class="scard-sub">BI Tranby totalt</div>
+      <div class="scard-sub">Posepakking totalt</div>
       <div class="scard-bar"><div class="scard-bar-fill" style="width:${Math.min(s.totalPct,100)}%;background:${col};"></div></div>
     </div>`;
 }
@@ -428,7 +425,7 @@ tick();setInterval(tick,1000);
 
 // ── LOAD DATA ──
 async function loadData(){
-  const url=document.getElementById('spUrl').value.trim();
+  const url='https://raw.githubusercontent.com/u8457423799-commits/Dashbord2/main/produksjon.json';
   const errEl=document.getElementById('errBanner');
   let raw=null,source='demo';
 
