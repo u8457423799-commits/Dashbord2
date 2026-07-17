@@ -72,7 +72,7 @@ tbody td:nth-child(2){text-align:left;color:#898781;font-family:monospace;font-s
 <div class="dash">
   <div class="topbar">
     <div class="top-left">
-      <div class="top-title">Dashboard Tranby</div>
+      <div class="top-title">Dashboard Posepakking</div>
       <div class="site-badge">BI-Tranby</div>
     </div>
     <div class="top-right">
@@ -337,24 +337,29 @@ function renderMid(s){
   const sCol=statusCol(eta.status);
 
   let html=`<div class="card" style="justify-content:center;">
-    <div class="card-title" style="color:#e8e6e0;">Ferdigvare (DV + SK)</div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
-      <div style="font-size:12px;color:#6aabf7;font-weight:500;">${eta.eta||'Ikke startet'}</div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;border-top:0.5px solid #252830;padding-top:6px;">
+    <div class="card-title" style="color:#e8e6e0;font-size:13px;">Ferdigvare (DV + SK)</div>
+    <div style="margin-bottom:8px;padding-bottom:8px;border-bottom:0.5px solid #252830;">
+      <div style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px;">Plan totalt DV + SK</div>
+      <div style="font-size:26px;font-weight:600;color:#e8e6e0;">${fmt(fvPlan)}</div>
+      <div style="font-size:11px;color:#898781;">stk</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <div style="font-size:14px;color:#6aabf7;font-weight:600;">${eta.eta||'Ikke startet'}</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;border-top:0.5px solid #252830;padding-top:8px;">
         <span style="color:#898781;">Status</span>
-        <span style="color:${sCol};font-weight:500;">${eta.status}</span>
+        <span style="color:${sCol};font-weight:600;">${eta.status}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
         <span style="color:#898781;">Takt/time nå</span>
-        <span style="color:#e8e6e0;font-weight:500;">${fmt(eta.taktNa)}</span>
+        <span style="color:#e8e6e0;font-weight:600;">${fmt(eta.taktNa)}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
         <span style="color:#898781;">Behov takt/time</span>
-        <span style="color:#e8e6e0;font-weight:500;">${fmt(eta.taktBehov)}</span>
+        <span style="color:#e8e6e0;font-weight:600;">${fmt(eta.taktBehov)}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;border-top:0.5px solid #252830;padding-top:6px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;border-top:0.5px solid #252830;padding-top:8px;">
         <span style="color:#898781;">Gjenstår</span>
-        <span style="color:#e34948;font-weight:500;">${fmt(eta.gjenstaar)} stk</span>
+        <span style="color:#e34948;font-weight:600;">${fmt(eta.gjenstaar)} stk</span>
       </div>
     </div>
   </div>`;
@@ -495,7 +500,7 @@ tick();setInterval(tick,1000);
 
 // ── LOAD DATA ──
 async function loadData(){
-  const url='https://raw.githubusercontent.com/u8457423799-commits/Dashbord2/main/produksjon2.json';
+  const url='https://raw.githubusercontent.com/u8457423799-commits/Dashbord2/main/produksjon.json';
   const errEl=document.getElementById('errBanner');
   let raw=null,source='demo';
 
@@ -548,7 +553,7 @@ async function loadData(){
   renderTable();
   document.getElementById('lastUpdated').textContent=
     'Sist oppdatert: '+new Date().toLocaleTimeString('nb-NO')+
-    (source==='github'?' · live ✅':' · demo-data — GitHub ikke tilgjengelig');
+    (source==='github'?' · GitHub (live) ✅':' · demo-data — GitHub ikke tilgjengelig');
 }
 
 loadData();
