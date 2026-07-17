@@ -553,7 +553,7 @@ async function loadData(){
   renderTable();
   document.getElementById('lastUpdated').textContent=
     'Sist oppdatert: '+new Date().toLocaleTimeString('nb-NO')+
-    (source==='github'?' · GitHub (live) ✅':' · demo-data — GitHub ikke tilgjengelig');
+    (source==='github'?' · live ✅':' · demo-data — GitHub ikke tilgjengelig');
 }
 
 loadData();
