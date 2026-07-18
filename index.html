@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Posepakking — BI-Tranby</title>
+<title>Dashboard — BI-Tranby</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:system-ui,-apple-system,sans-serif;background:#0d0f14;color:#e8e6e0;min-height:100vh;}
@@ -150,17 +150,16 @@ function fmtDate(iso){
 
 // Prod_group → kort label + farge
 const GROUP_META={
-  'FV-SF-DV':{label:'Dagligvare',color:'#4dd44d',bg:'#0b2d0b'},
-  'FV-SF-SK':{label:'Storkjøkken',color:'#6aabf7',bg:'#0b1e38'},
-  'FV-SF-Vaku':{label:'Vakuum',color:'#c084fc',bg:'#1e0b38'},
-  'FV-SF-Ind':{label:'Industri',color:'#fab219',bg:'#2d1800'},
-  'FV-SF-Be':{label:'Beger',color:'#f472b6',bg:'#2d0b1e'},
-  'HF':{label:'HF',color:'#38bdf8',bg:'#0b1e2d'},
+  'Dagligvare':{label:'Dagligvare',color:'#4dd44d',bg:'#0b2d0b'},
+  'Storkjøkken':{label:'Storkjøkken',color:'#6aabf7',bg:'#0b1e38'},
+  'Beger':{label:'Beger',color:'#f472b6',bg:'#2d0b1e'},
+  'HF Trim':{label:'HF Trim',color:'#38bdf8',bg:'#0b1e2d'},
+  'HF Kuttetorg':{label:'HF Kuttetorg',color:'#a78bfa',bg:'#1e0b38'},
 };
+// Grupper uten speedometer
+const ALLE_GRUPPER=['Dagligvare','Storkjøkken','Beger','Industri','Vakuum','HF Trim','HF Kuttetorg','Annet'];
 function groupMeta(g){
-  for(const key of Object.keys(GROUP_META)){
-    if(g&&g.startsWith(key))return{...GROUP_META[key],key};
-  }
+  if(GROUP_META[g])return{...GROUP_META[g],key:g};
   return{label:g||'—',color:'#898781',bg:'#1a1c24',key:g};
 }
 
@@ -195,9 +194,10 @@ function process(raw){
 }
 
 // ── SUMMARY ──
-const FV_GROUPS=['FV-SF-DV','FV-SF-SK','FV-SF-Vaku','FV-SF-Ind','FV-SF-Be'];
-function isFV(r){return r.Prod_group&&FV_GROUPS.some(g=>r.Prod_group.startsWith(g));}
-function isHF(r){return r.Prod_group&&r.Prod_group.startsWith('HF');}
+const FV_GRUPPER=['Dagligvare','Storkjøkken','Beger','Industri','Vakuum'];
+const HF_GRUPPER=['HF Trim','HF Kuttetorg'];
+function isFV(r){return FV_GRUPPER.includes(r.Prod_group);}
+function isHF(r){return HF_GRUPPER.includes(r.Prod_group);}
 
 function calcSummary(data){
   const totPlan=data.reduce((s,r)=>s+r.plan,0);
@@ -219,7 +219,7 @@ function calcSummary(data){
   // Per prod_group
   const groups={};
   data.forEach(r=>{
-    const key=Object.keys(GROUP_META).find(k=>r.Prod_group&&r.Prod_group.startsWith(k))||r.Prod_group||'Annet';
+    const key=r.Prod_group||'Annet';
     if(!groups[key])groups[key]={plan:0,done:0,remaining:0};
     groups[key].plan+=r.plan;
     groups[key].done+=r.done;
@@ -291,22 +291,91 @@ function makeSVGMeter(pctVal,color){
 }
 
 // ── RENDER MID (gruppe-seedometre) ──
+function calcETA(plan, done) {
+  const now = new Date();
+  const nowDec = now.getHours() + now.getMinutes()/60 + now.getSeconds()/3600;
+  const startDec = 6; // 06:00
+  const taktBehov = Math.round(plan / 16);
+  const gjenstaar = Math.max(0, plan - done);
+
+  if(done >= plan) return {eta:'Est. ferdig', status:'Ferdig', taktNa:0, taktBehov, gjenstaar:0};
+  if(done <= 0 || nowDec <= startDec) return {eta:'', status:'Ikke startet', taktNa:0, taktBehov, gjenstaar};
+
+  const elapsed = nowDec - startDec;
+  const taktNa = elapsed > 0 ? Math.round(done / elapsed) : 0;
+  let eta = '', status = 'På plan';
+
+  if(taktNa > 0) {
+    const timerGjenstaar = gjenstaar / taktNa;
+    const etaDec = nowDec + timerGjenstaar;
+    const etaH = Math.floor(etaDec) % 24;
+    const etaM = Math.round((etaDec - Math.floor(etaDec)) * 60);
+    const etaStr = String(etaH).padStart(2,'0') + ':' + String(etaM).padStart(2,'0');
+    const iDag = etaDec < 24;
+    eta = 'Est. ferdig ' + etaStr + (iDag ? ' i dag' : ' i morgen');
+    const diff = taktNa - taktBehov;
+    if(Math.abs(diff) <= 300) status = 'På plan';
+    else if(diff < -300) status = 'Bak plan';
+    else status = 'Foran plan';
+  }
+  return {eta, status, taktNa, taktBehov, gjenstaar};
+}
+
+function statusCol(s){
+  return s==='Foran plan'?'#4dd44d':s==='Bak plan'?'#e34948':'#fab219';
+}
+
 function renderMid(s){
   const mainGroups=Object.keys(GROUP_META);
-  const cols=mainGroups.length;
-  document.getElementById('midRow').style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  // ETA-boks + 5 speedometre = 6 kolonner
+  document.getElementById('midRow').style.gridTemplateColumns=`repeat(6,1fr)`;
 
-  let html='';
+  // ETA for Dagligvare + Storkjøkken samlet
+  const fvPlan=(s.groups['Dagligvare']||{plan:0}).plan+(s.groups['Storkjøkken']||{plan:0}).plan;
+  const fvDone=(s.groups['Dagligvare']||{done:0}).done+(s.groups['Storkjøkken']||{done:0}).done;
+  const eta=calcETA(fvPlan,fvDone);
+  const sCol=statusCol(eta.status);
+
+  let html=`<div class="card" style="justify-content:center;">
+    <div class="card-title" style="color:#e8e6e0;font-size:13px;">Ferdigvare (DV + SK)</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:0.5px solid #252830;">
+      <div>
+        <div style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.07em;margin-bottom:1px;">Plan totalt</div>
+        <div style="font-size:22px;font-weight:600;color:#e8e6e0;">${fmt(fvPlan)} <span style="font-size:11px;color:#898781;">stk</span></div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.07em;margin-bottom:1px;">Gjenstår</div>
+        <div style="font-size:22px;font-weight:600;color:#e34948;">${fmt(eta.gjenstaar)} <span style="font-size:11px;color:#898781;">stk</span></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      <div style="font-size:14px;color:#6aabf7;font-weight:600;">${eta.eta||'Ikke startet'}</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;border-top:0.5px solid #252830;padding-top:7px;">
+        <span style="color:#898781;">Status</span>
+        <span style="color:${sCol};font-weight:600;">${eta.status}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span style="color:#898781;">Takt/time nå</span>
+        <span style="color:#e8e6e0;font-weight:600;">${fmt(eta.taktNa)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span style="color:#898781;">Behov takt/time</span>
+        <span style="color:#e8e6e0;font-weight:600;">${fmt(eta.taktBehov)}</span>
+      </div>
+    </div>
+  </div>`;
+
   mainGroups.forEach(key=>{
     const g=s.groups[key]||{plan:0,done:0,remaining:0};
     const m=GROUP_META[key];
     const p=pct(g.done,g.plan);
+    const unit=key.startsWith('HF')?'kg':'stk';
     html+=`<div class="card" style="align-items:center;">
       <div class="card-title" style="color:${m.color};text-align:center;">${m.label}</div>
       <div class="meter-wrap">
         ${makeSVGMeter(p,m.color)}
         <div class="meter-pct" style="color:${m.color};">${p}%</div>
-        <div class="meter-sub">${fmt(g.done)} / ${fmt(g.plan)}</div>
+        <div class="meter-sub">${fmt(g.done)} / ${fmt(g.plan)} ${unit}</div>
         <div class="meter-nums">
           <div class="mn-item"><div class="mn-val" style="color:#4dd44d;">${fmt(g.done)}</div><div class="mn-lbl">Ferdig</div></div>
           <div class="mn-item"><div class="mn-val" style="color:#e34948;">${fmt(g.remaining)}</div><div class="mn-lbl">Gjenstår</div></div>
@@ -359,33 +428,40 @@ function renderTable(){
 }
 
 // ── FILTER BUTTONS ──
+// Alle mulige grupper i fast rekkefølge
+const ALLE_FILTER_GRUPPER=[
+  {key:'Dagligvare',   color:'#4dd44d', bg:'#0b2d0b'},
+  {key:'Storkjøkken', color:'#6aabf7', bg:'#0b1e38'},
+  {key:'Beger',       color:'#f472b6', bg:'#2d0b1e'},
+  {key:'Industri',    color:'#fab219', bg:'#2d1800'},
+  {key:'Vakuum',      color:'#c084fc', bg:'#1e0b38'},
+  {key:'HF Trim',     color:'#38bdf8', bg:'#0b1e2d'},
+  {key:'HF Kuttetorg',color:'#a78bfa', bg:'#1e0b38'},
+];
+
 function buildFilterButtons(data){
   const bar=document.getElementById('filterBar');
-  // Fjern gamle gruppe-knapper
   bar.querySelectorAll('.grp-btn').forEach(b=>b.remove());
   const search=bar.querySelector('.search-wrap');
 
-  // Legg til gruppe-knapper basert på data
-  const foundGroups=new Set();
-  data.forEach(r=>{
-    const key=Object.keys(GROUP_META).find(k=>r.Prod_group&&r.Prod_group.startsWith(k));
-    if(key)foundGroups.add(key);
-  });
+  // Finn hvilke grupper som faktisk finnes i data
+  const foundGroups=new Set(data.map(r=>r.Prod_group).filter(Boolean));
 
-  foundGroups.forEach(key=>{
-    const m=GROUP_META[key];
+  ALLE_FILTER_GRUPPER.filter(g=>foundGroups.has(g.key)).forEach(g=>{
     const btn=document.createElement('button');
     btn.className='fbtn grp-btn';
-    btn.dataset.f=key;
-    btn.textContent=m.label;
-    btn.style.cssText=``;
+    btn.dataset.f=g.key;
+    btn.textContent=g.key;
     btn.addEventListener('click',()=>{
-      document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.fbtn').forEach(b=>{
+        b.classList.remove('active');
+        b.style.background='';b.style.borderColor='';b.style.color='';
+      });
       btn.classList.add('active');
-      btn.style.background=m.bg;
-      btn.style.borderColor=m.color;
-      btn.style.color=m.color;
-      currentFilter=key;
+      btn.style.background=g.bg;
+      btn.style.borderColor=g.color;
+      btn.style.color=g.color;
+      currentFilter=g.key;
       renderTable();
     });
     bar.insertBefore(btn,search);
@@ -425,7 +501,7 @@ tick();setInterval(tick,1000);
 
 // ── LOAD DATA ──
 async function loadData(){
-  const url='https://raw.githubusercontent.com/u8457423799-commits/Dashbord2/main/produksjon.json';
+  const url='https://raw.githubusercontent.com/u8457423799-commits/Dashbord2/main/produksjon2.json';
   const errEl=document.getElementById('errBanner');
   let raw=null,source='demo';
 
